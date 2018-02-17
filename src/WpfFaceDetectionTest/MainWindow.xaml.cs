@@ -14,10 +14,9 @@ namespace WpfFaceDetectionTest
     /// </summary>
     public partial class MainWindow : Window
     {
-
-        private Capture capture;
-        private HaarCascade haarCascade;
-        DispatcherTimer timer;
+        private VideoCapture _capture;
+        private CascadeClassifier _haarCascade;
+        DispatcherTimer _timer;
 
         public MainWindow()
         {
@@ -26,32 +25,31 @@ namespace WpfFaceDetectionTest
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            capture = new Capture();
-            haarCascade = new HaarCascade(@"haarcascade_frontalface_alt_tree.xml");
-            timer = new DispatcherTimer();
-            timer.Tick += new EventHandler(timer_Tick);
-            timer.Interval = new TimeSpan(0, 0, 0, 0, 1);
-            timer.Start();
-        }
+            _capture = new VideoCapture();
+            _haarCascade = new CascadeClassifier(@"haarcascade_frontalface_alt_tree.xml");
 
-        void timer_Tick(object sender, EventArgs e)
-        {
-            Image<Bgr,Byte> currentFrame = capture.QueryFrame();
-
-            if (currentFrame != null)
+            _timer = new DispatcherTimer();
+            _timer.Tick += (_, __) => 
             {
-                Image<Gray, Byte> grayFrame = currentFrame.Convert<Gray, Byte>();
-                    
-                var detectedFaces = grayFrame.DetectHaarCascade(haarCascade)[0];
-                    
-                foreach (var face in detectedFaces)
-                    currentFrame.Draw(face.rect, new Bgr(0, double.MaxValue, 0), 3);
-                    
-                image1.Source = ToBitmapSource(currentFrame);
-            }
+                Image<Bgr, Byte> currentFrame = _capture.QueryFrame().ToImage<Bgr, Byte>();
+
+                if (currentFrame != null)
+                {
+                    Image<Gray, Byte> grayFrame = currentFrame.Convert<Gray, Byte>();
+
+                    var detectedFaces = _haarCascade.DetectMultiScale(grayFrame);
+
+                    foreach (var face in detectedFaces)
+                        currentFrame.Draw(face, new Bgr(0, double.MaxValue, 0), 3);
+
+                    image1.Source = ToBitmapSource(currentFrame);
+                }
+            };
+            _timer.Interval = new TimeSpan(0, 0, 0, 0, 1);
+            _timer.Start();
             
         }
-
+        
         [DllImport("gdi32")]
         private static extern int DeleteObject(IntPtr o);
 
